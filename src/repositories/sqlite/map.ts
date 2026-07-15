@@ -1,5 +1,6 @@
 import {Booking} from '../../features/bookings/booking.types';
 import {RestaurantTable} from '../../features/tables/table.types';
+import {Client} from '../../features/clients/client.types';
 
 export type BookingRow = {
     id: string;
@@ -42,6 +43,22 @@ export const mapTable = (r: TableRow): RestaurantTable => ({
     name: r.name,
     sortOrder: r.sort_order,
     isActive: Boolean(r.is_active),
+    createdAt: r.created_at,
+    updatedAt: r.updated_at
+});
+export type ClientRow = {
+    id: string;
+    name: string;
+    phone: string;
+    note: string;
+    created_at: string;
+    updated_at: string;
+};
+export const mapClient = (r: ClientRow): Client => ({
+    id: r.id,
+    name: r.name,
+    phone: r.phone,
+    note: r.note,
     createdAt: r.created_at,
     updatedAt: r.updated_at
 });

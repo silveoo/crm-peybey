@@ -6,6 +6,8 @@ import {DomainError} from '../lib/errors';
 import {BookingRepository} from './BookingRepository';
 import {AppSettings, SettingsRepository} from './SettingsRepository';
 import {TableRepository} from './TableRepository';
+import {Client, ClientInput} from '../features/clients/client.types';
+import {ClientRepository} from './ClientRepository';
 
 const createId = () => crypto.randomUUID();
 const stamp = nowIso();
@@ -20,6 +22,7 @@ let tables: RestaurantTable[] = [1, 2, 3, 4].map((n) => ({
 }));
 
 let bookings: Booking[] = [];
+let clients: Client[] = [];
 let settings: AppSettings = {
     restaurantName: 'Peybey CRM',
     dayStart: '09:00',
@@ -122,4 +125,22 @@ export class MemorySettingsRepository implements SettingsRepository {
         settings = next;
         return settings;
     }
+}
+
+export class MemoryClientRepository implements ClientRepository {
+    async list() { return [...clients].sort((a, b) => a.name.localeCompare(b.name, 'ru')) }
+    async create(input: ClientInput) {
+        if (clients.some(client => client.phone === input.phone)) throw new DomainError('Клиент с таким номером уже существует');
+        const now = nowIso(), client = {id: createId(), ...input, createdAt: now, updatedAt: now};
+        clients = [...clients, client];
+        return client
+    }
+    async update(id: string, input: ClientInput) {
+        if (clients.some(client => client.id !== id && client.phone === input.phone)) throw new DomainError('Клиент с таким номером уже существует');
+        const now = nowIso();
+        const client = {id, ...input, createdAt: clients.find(item => item.id === id)?.createdAt ?? now, updatedAt: now};
+        clients = clients.map(item => item.id === id ? client : item);
+        return client
+    }
+    async delete(id: string) { clients = clients.filter(client => client.id !== id) }
 }

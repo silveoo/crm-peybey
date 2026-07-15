@@ -21,7 +21,9 @@ export function CalendarPage({reload}: { reload: () => Promise<void> }) {
     } | null>(null);
     const save = async (v: BookingInput) => {
         try {
-            if (edit?.id) await bookingService.update(edit.id, v, s.settings!); else await bookingService.create(v, s.settings!);
+            const clientNote = s.clients.find(client => client.phone === v.phone)?.note;
+            const input = {...v, comment: v.comment.trim() || clientNote || ''};
+            if (edit?.id) await bookingService.update(edit.id, input, s.settings!); else await bookingService.create(input, s.settings!);
             s.set({toast: 'Бронь сохранена'});
             await reload()
         } catch (e) {
@@ -75,7 +77,7 @@ export function CalendarPage({reload}: { reload: () => Promise<void> }) {
                                           status: 'confirmed',
                                           guestCount: 2
                                       })} onBooking={setEdit} onMove={move}/>} {edit &&
-        <BookingDialog initial={edit} tables={s.tables} onClose={() => setEdit(null)} onSave={save}
+        <BookingDialog initial={edit} tables={s.tables} clients={s.clients} onClose={() => setEdit(null)} onSave={save}
                        onDelete={edit.id ? async () => {
                            if (confirm('Удалить бронь?')) {
                                await bookingService.delete(edit.id!);

@@ -1,11 +1,12 @@
 import {useCallback, useEffect} from 'react';
 import {AppShell} from '../components/layout/AppShell';
 import {useAppStore} from '../store/appStore';
-import {bookingService, settingsRepo, tableService} from './providers';
+import {bookingService, clientService, settingsRepo, tableService} from './providers';
 import {CalendarPage} from '../pages/CalendarPage';
 import {TablesPage} from '../pages/TablesPage';
 import {SettingsPage} from '../pages/SettingsPage';
 import {toUserMessage} from '../lib/errors';
+import {ClientsPage} from '../pages/ClientsPage';
 
 export function App() {
     const s = useAppStore();
@@ -13,8 +14,8 @@ export function App() {
         const date = useAppStore.getState().date;
         s.set({loading: true, error: null});
         try {
-            const [settings, tables, bookings] = await Promise.all([settingsRepo.get(), tableService.list(), bookingService.listByDate(date)]);
-            s.set({settings, tables, bookings, loading: false})
+            const [settings, tables, bookings, clients] = await Promise.all([settingsRepo.get(), tableService.list(), bookingService.listByDate(date), clientService.list()]);
+            s.set({settings, tables, bookings, clients, loading: false})
         } catch (e) {
             s.set({error: toUserMessage(e), loading: false})
         }
@@ -30,7 +31,8 @@ export function App() {
     return <AppShell>{s.error && <div className="m-4 rounded bg-red-50 p-3 text-red-700">{s.error}</div>}{s.loading &&
         <div className="p-6">Загрузка…</div>}{!s.loading && s.page === 'calendar' &&
         <CalendarPage reload={reload}/>} {!s.loading && s.page === 'tables' &&
-        <TablesPage reload={reload}/>} {!s.loading && s.page === 'settings' && s.settings &&
+        <TablesPage reload={reload}/>} {!s.loading && s.page === 'clients' &&
+        <ClientsPage reload={reload}/>} {!s.loading && s.page === 'settings' && s.settings &&
         <SettingsPage reload={reload}/>} {s.toast && <button onClick={() => s.set({toast: null})}
                                                              className="fixed right-4 top-4 z-[60] max-w-md rounded-xl bg-neutral-900 px-4 py-3 text-left text-white shadow-xl">{s.toast}</button>}</AppShell>
 }

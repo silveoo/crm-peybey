@@ -1,8 +1,9 @@
-import {CalendarDays, Settings, Utensils} from 'lucide-react';
+import {CalendarDays, Settings, UserRound, Utensils} from 'lucide-react';
 import {useAppStore, Page} from '../../store/appStore';
 
 const items: [Page, string, React.ReactNode][] = [['calendar', 'Календарь',
-    <CalendarDays size={18}/>], ['tables', 'Столы', <Utensils size={18}/>], ['settings', 'Настройки',
+    <CalendarDays size={18}/>], ['tables', 'Столы', <Utensils size={18}/>], ['clients', 'Клиенты',
+    <UserRound size={18}/>], ['settings', 'Настройки',
     <Settings size={18}/>]];
 
 export function AppShell({children}: { children: React.ReactNode }) {

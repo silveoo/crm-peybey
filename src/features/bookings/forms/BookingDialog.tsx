@@ -1,15 +1,19 @@
 import {useEffect, useState} from 'react';
-import {useForm} from 'react-hook-form';
+import {Controller, useForm} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import {bookingSchema, BookingFormInput, BookingFormValues} from '../booking.schema';
 import {Booking} from '../booking.types';
 import {RestaurantTable} from '../../tables/table.types';
 import {Button} from '../../../components/ui/Button';
 import {Input} from '../../../components/ui/Input';
+import {Client} from '../../clients/client.types';
+import {formatPhone, PHONE_PATTERN} from '../../../lib/phone';
+import {PhoneInput} from '../../../components/ui/PhoneInput';
 
-export function BookingDialog({initial, tables, onClose, onSave, onDelete}: {
+export function BookingDialog({initial, tables, clients, onClose, onSave, onDelete}: {
     initial: Partial<BookingFormValues> & Partial<Booking>;
     tables: RestaurantTable[];
+    clients: Client[];
     onClose: () => void;
     onSave: (v: BookingFormValues) => Promise<void>;
     onDelete?: () => Promise<void>
@@ -20,7 +24,10 @@ export function BookingDialog({initial, tables, onClose, onSave, onDelete}: {
         register,
         handleSubmit,
         formState: {errors, isDirty},
-        reset
+        reset,
+        control,
+        getValues,
+        setValue
     } = useForm<BookingFormInput, unknown, BookingFormValues>({
         resolver: zodResolver(bookingSchema),
         defaultValues: {
@@ -29,7 +36,7 @@ export function BookingDialog({initial, tables, onClose, onSave, onDelete}: {
             startTime: initial.startTime ?? '09:00',
             endTime: initial.endTime ?? '10:00',
             guestName: initial.guestName ?? '',
-            phone: initial.phone ?? '',
+            phone: initial.phone ? formatPhone(initial.phone) : '+7',
             guestCount: initial.guestCount ?? 2,
             comment: initial.comment ?? '',
             status: initial.status ?? 'confirmed'
@@ -45,7 +52,9 @@ export function BookingDialog({initial, tables, onClose, onSave, onDelete}: {
         }
         onClose()
     };
-    return <div className="fixed inset-0 z-50 flex justify-end bg-black/20">
+    return <div onMouseDown={event => {
+        if (event.target === event.currentTarget) onClose()
+    }} className="fixed inset-0 z-50 flex justify-end bg-black/20">
         <form onSubmit={handleSubmit(async v => {
             setSaving(true);
             try {
@@ -68,8 +77,19 @@ export function BookingDialog({initial, tables, onClose, onSave, onDelete}: {
                 type="date" {...register('bookingDate')}/>
                 <div className="grid grid-cols-2 gap-2"><Input type="time" step={900} {...register('startTime')}/><Input
                     type="time" step={900} {...register('endTime')}/></div>
-                <Input placeholder="Имя гостя" {...register('guestName')}/><Input
-                    placeholder="Телефон" {...register('phone')}/><Input type="number"
+                <Input placeholder="Имя гостя" {...register('guestName')}/><Controller name="phone" control={control}
+                    render={({field}) => <PhoneInput {...field} value={field.value ?? '+7'}
+                                               placeholder="+7 (___) ___-__-__" onValueChange={phone => {
+                        field.onChange(phone);
+                        if (!PHONE_PATTERN.test(phone)) return;
+                        const client = clients.find(item => item.phone === phone);
+                        if (client?.name && !getValues('guestName')?.trim()) {
+                            setValue('guestName', client.name, {shouldDirty: true, shouldValidate: true})
+                        }
+                        if (client?.note && !getValues('comment')?.trim()) {
+                            setValue('comment', client.note, {shouldDirty: true})
+                        }
+                    }}/>} /><Input type="number"
                                                                          min={1} {...register('guestCount')}/><textarea
                     className="w-full rounded-lg border p-2" placeholder="Комментарий" {...register('comment')}/><select
                     className="w-full rounded-lg border p-2" {...register('status')}>

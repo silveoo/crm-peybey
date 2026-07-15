@@ -135,8 +135,7 @@ export function CalendarBoard({date, tables, bookings, settings, onSlot, onBooki
                                       className={`relative border-l ${dropTarget?.tableId === t.id && dropTarget.minute === m ? 'bg-blue-100' : Math.floor((m - start) / 60) % 2 === 0 ? 'bg-white' : 'bg-neutral-50'} ${
                                           (m - start) % majorStep === 0 ? 'border-t border-neutral-200' : 'border-t border-neutral-100'
                                       }`}
-                                      style={{height: rowH / 2}}>{sel?.t === t.id && m >= Math.min(sel.s, sel.e) && m < Math.max(sel.s, sel.e) &&
-                    <div className="absolute inset-x-2 inset-y-0.5 rounded bg-neutral-900/10"/>}</div>)}</div>)}</div>
+                                      style={{height: rowH / 2}}/>)}</div>)}</div>
         <div className="pointer-events-none relative grid min-w-max" style={{
             marginLeft: 80,
             marginTop: -slots.length * rowH / 2,
@@ -146,6 +145,14 @@ export function CalendarBoard({date, tables, bookings, settings, onSlot, onBooki
         }}>{showNow && <div className="absolute inset-x-0 z-20 border-t-2 border-red-500" style={{top: (nowOnScale - start) * ppm}}>
             <span className="absolute -left-[72px] -top-2.5 rounded bg-red-500 px-1 text-[10px] font-medium text-white">{timeFromMinutes(Math.floor(nowClock))}</span>
         </div>}{active.map(t => <div key={t.id} className="relative h-full">
+            {sel?.t === t.id && <div
+                className="absolute left-2 right-2 z-20 rounded-xl border border-neutral-500 bg-neutral-500/25 p-2 text-left text-xs text-neutral-800 shadow-sm"
+                style={{
+                    top: (Math.min(sel.s, sel.e) - start) * ppm,
+                    height: (Math.max(sel.s, sel.e) - Math.min(sel.s, sel.e)) * ppm
+                }}>
+                <b>{timeFromMinutes(Math.min(sel.s, sel.e))} – {timeFromMinutes(Math.max(sel.s, sel.e))}</b>
+            </div>}
             {dragged && dropTarget?.tableId === t.id && <div
                 className="absolute left-2 right-2 z-30 overflow-hidden rounded-xl border-2 border-blue-600 bg-blue-100/95 p-2 text-left text-xs text-blue-950 shadow-lg"
                 style={{
