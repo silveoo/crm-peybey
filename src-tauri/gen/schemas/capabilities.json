@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Default permissions","local":true,"windows":["main"],"permissions":["sql:default","sql:allow-load","sql:allow-execute","sql:allow-select"]}}
