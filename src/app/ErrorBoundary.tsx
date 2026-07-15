@@ -1,1 +1,14 @@
-import {Component,ReactNode} from 'react';export class ErrorBoundary extends Component<{children:ReactNode},{error:string|null}>{state={error:null};static getDerivedStateFromError(e:Error){return{error:e.message}}render(){return this.state.error?<div className="p-6 text-red-700">Ошибка приложения: {this.state.error}</div>:this.props.children}}
+import {Component, ReactNode} from 'react';
+
+export class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
+    state = {error: null};
+
+    static getDerivedStateFromError(e: Error) {
+        return {error: e.message}
+    }
+
+    render() {
+        return this.state.error ?
+            <div className="p-6 text-red-700">Ошибка приложения: {this.state.error}</div> : this.props.children
+    }
+}

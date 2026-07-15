@@ -1,2 +1,66 @@
-import {useMemo,useState} from 'react';import {Booking} from '../../bookings/booking.types';import {RestaurantTable} from '../../tables/table.types';import {AppSettings} from '../../../repositories/SettingsRepository';import {heightForRange,minutesFromTime,sortTables,timeFromMinutes,topForTime} from '../calendar.utils';
-const rowH=48;export function CalendarBoard({date,tables,bookings,settings,onSlot,onBooking}:{date:string;tables:RestaurantTable[];bookings:Booking[];settings:AppSettings;onSlot:(tableId:string,start:string,end:string)=>void;onBooking:(b:Booking)=>void}){const active=sortTables(tables).filter(t=>t.isActive);const start=minutesFromTime(settings.dayStart),end=minutesFromTime(settings.dayEnd),ppm=rowH/settings.stepMinutes;const slots=useMemo(()=>Array.from({length:(end-start)/settings.stepMinutes},(_,i)=>start+i*settings.stepMinutes),[start,end,settings.stepMinutes]);const[sel,setSel]=useState<{t:string;s:number;e:number}|null>(null);const finish=()=>{if(sel){const a=Math.min(sel.s,sel.e),b=Math.max(sel.s,sel.e)+settings.stepMinutes;onSlot(sel.t,timeFromMinutes(a),timeFromMinutes(b));setSel(null)}};return <div onMouseUp={finish} className="h-full overflow-auto scrollbar no-select rounded-2xl border bg-white shadow-sm"><div style={{gridTemplateColumns:`80px repeat(${active.length}, minmax(180px, 1fr))`}} className="grid min-w-max"><div className="sticky left-0 top-0 z-30 border-b bg-white"/><>{active.map(t=><div key={t.id} className="sticky top-0 z-20 border-b border-l bg-white/95 p-3 font-medium backdrop-blur">{t.name}</div>)}</>{slots.map(m=><div key={m} className="contents"><div className="sticky left-0 z-10 border-b bg-white p-2 text-xs text-neutral-500">{timeFromMinutes(m)}</div>{active.map(t=><div key={t.id+m} onMouseDown={e=>{if((e.target as HTMLElement).dataset.booking)return;setSel({t:t.id,s:m,e:m})}} onMouseMove={()=>sel?.t===t.id&&setSel({...sel,e:m})} onClick={()=>!sel&&onSlot(t.id,timeFromMinutes(m),timeFromMinutes(m+settings.stepMinutes))} className="relative border-b border-l bg-[linear-gradient(#fafafa,#fff)]" style={{height:rowH}}>{sel?.t===t.id&&m>=Math.min(sel.s,sel.e)&&m<=Math.max(sel.s,sel.e)&&<div className="absolute inset-x-2 inset-y-1 rounded-lg bg-neutral-900/10"/>}</div>)}</div>)}</div><div className="pointer-events-none relative" style={{marginLeft:80,marginTop:-slots.length*rowH,height:slots.length*rowH,width:active.length*180}}>{active.map((t,idx)=><div key={t.id} className="absolute top-0" style={{left:`calc(${idx} * max(180px, (100vw - 344px)/${Math.max(active.length,1)}))`,width:`max(180px, (100vw - 344px)/${Math.max(active.length,1)})`,height:'100%'}}>{bookings.filter(b=>b.tableId===t.id&&(settings.showCompleted||b.status!=='completed')).map(b=><button data-booking="1" key={b.id} onClick={()=>onBooking(b)} className="pointer-events-auto absolute left-2 right-2 overflow-hidden rounded-xl border border-neutral-300 bg-white p-2 text-left text-xs shadow-md hover:shadow-lg" style={{top:topForTime(b.startTime,settings.dayStart,ppm),height:heightForRange(b.startTime,b.endTime,ppm)}} title={`${b.guestName}, ${b.guestCount} гостей, ${b.startTime}-${b.endTime}`}><b>{b.startTime} {b.guestName}</b><p className="truncate text-neutral-500">{b.comment}</p></button>)}</div>)}</div></div>}
+import {useMemo, useState} from 'react';
+import {Booking} from '../../bookings/booking.types';
+import {RestaurantTable} from '../../tables/table.types';
+import {AppSettings} from '../../../repositories/SettingsRepository';
+import {heightForRange, minutesFromTime, sortTables, timeFromMinutes, topForTime} from '../calendar.utils';
+
+const rowH = 48;
+
+export function CalendarBoard({date, tables, bookings, settings, onSlot, onBooking}: {
+    date: string;
+    tables: RestaurantTable[];
+    bookings: Booking[];
+    settings: AppSettings;
+    onSlot: (tableId: string, start: string, end: string) => void;
+    onBooking: (b: Booking) => void
+}) {
+    const active = sortTables(tables).filter(t => t.isActive);
+    const start = minutesFromTime(settings.dayStart), end = minutesFromTime(settings.dayEnd),
+        ppm = rowH / settings.stepMinutes;
+    const slots = useMemo(() => Array.from({length: (end - start) / settings.stepMinutes}, (_, i) => start + i * settings.stepMinutes), [start, end, settings.stepMinutes]);
+    const [sel, setSel] = useState<{ t: string; s: number; e: number } | null>(null);
+    const finish = () => {
+        if (sel) {
+            const a = Math.min(sel.s, sel.e), b = Math.max(sel.s, sel.e) + settings.stepMinutes;
+            onSlot(sel.t, timeFromMinutes(a), timeFromMinutes(b));
+            setSel(null)
+        }
+    };
+    return <div onMouseUp={finish}
+                className="h-full overflow-auto scrollbar no-select rounded-2xl border bg-white shadow-sm">
+        <div style={{gridTemplateColumns: `80px repeat(${active.length}, minmax(180px, 1fr))`}}
+             className="grid min-w-max">
+            <div className="sticky left-0 top-0 z-30 border-b bg-white"/>
+            <>{active.map(t => <div key={t.id}
+                                    className="sticky top-0 z-20 border-b border-l bg-white/95 p-3 font-medium backdrop-blur">{t.name}</div>)}</>
+            {slots.map(m => <div key={m} className="contents">
+                <div
+                    className="sticky left-0 z-10 border-b bg-white p-2 text-xs text-neutral-500">{timeFromMinutes(m)}</div>
+                {active.map(t => <div key={t.id + m} onMouseDown={e => {
+                    if ((e.target as HTMLElement).dataset.booking) return;
+                    setSel({t: t.id, s: m, e: m})
+                }} onMouseMove={() => sel?.t === t.id && setSel({...sel, e: m})}
+                                      onClick={() => !sel && onSlot(t.id, timeFromMinutes(m), timeFromMinutes(m + settings.stepMinutes))}
+                                      className="relative border-b border-l bg-[linear-gradient(#fafafa,#fff)]"
+                                      style={{height: rowH}}>{sel?.t === t.id && m >= Math.min(sel.s, sel.e) && m <= Math.max(sel.s, sel.e) &&
+                    <div className="absolute inset-x-2 inset-y-1 rounded-lg bg-neutral-900/10"/>}</div>)}</div>)}</div>
+        <div className="pointer-events-none relative" style={{
+            marginLeft: 80,
+            marginTop: -slots.length * rowH,
+            height: slots.length * rowH,
+            width: active.length * 180
+        }}>{active.map((t, idx) => <div key={t.id} className="absolute top-0" style={{
+            left: `calc(${idx} * max(180px, (100vw - 344px)/${Math.max(active.length, 1)}))`,
+            width: `max(180px, (100vw - 344px)/${Math.max(active.length, 1)})`,
+            height: '100%'
+        }}>{bookings.filter(b => b.tableId === t.id && (settings.showCompleted || b.status !== 'completed')).map(b =>
+            <button data-booking="1" key={b.id} onClick={() => onBooking(b)}
+                    className="pointer-events-auto absolute left-2 right-2 overflow-hidden rounded-xl border border-neutral-300 bg-white p-2 text-left text-xs shadow-md hover:shadow-lg"
+                    style={{
+                        top: topForTime(b.startTime, settings.dayStart, ppm),
+                        height: heightForRange(b.startTime, b.endTime, ppm)
+                    }} title={`${b.guestName}, ${b.guestCount} гостей, ${b.startTime}-${b.endTime}`}>
+                <b>{b.startTime} {b.guestName}</b><p className="truncate text-neutral-500">{b.comment}</p>
+            </button>)}</div>)}</div>
+    </div>
+}

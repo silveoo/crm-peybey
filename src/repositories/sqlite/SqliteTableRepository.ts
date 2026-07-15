@@ -1,2 +1,39 @@
-import {getDb} from '../../lib/database';import {nowIso} from '../../lib/dates';import {TableRepository} from '../TableRepository';import {RestaurantTable,TableInput} from '../../features/tables/table.types';import {mapTable,TableRow} from './map';import {DomainError} from '../../lib/errors';
-const id=()=>crypto.randomUUID();export class SqliteTableRepository implements TableRepository{async list(){const db=await getDb();return (await db.select<TableRow[]>('select * from restaurant_tables order by sort_order,name')).map(mapTable)}async create(input:TableInput){const db=await getDb();const row={id:id(),createdAt:nowIso(),updatedAt:nowIso()};await db.execute('insert into restaurant_tables(id,name,sort_order,is_active,created_at,updated_at) values($1,$2,$3,$4,$5,$6)',[row.id,input.name,input.sortOrder,input.isActive?1:0,row.createdAt,row.updatedAt]);return {...input,...row} as RestaurantTable}async update(idv:string,input:TableInput){const db=await getDb();const updatedAt=nowIso();await db.execute('update restaurant_tables set name=$1,sort_order=$2,is_active=$3,updated_at=$4 where id=$5',[input.name,input.sortOrder,input.isActive?1:0,updatedAt,idv]);const rows=await db.select<TableRow[]>('select * from restaurant_tables where id=$1',[idv]);return mapTable(rows[0])}async delete(idv:string){const db=await getDb();const future=await db.select<{c:number}[]>('select count(*) c from bookings where table_id=$1 and status<>\'cancelled\' and booking_date>=date(\'now\')',[idv]);if((future[0]?.c??0)>0)throw new DomainError('Нельзя удалить стол с будущими бронями');await db.execute('delete from restaurant_tables where id=$1',[idv])}}
+import {getDb} from '../../lib/database';
+import {nowIso} from '../../lib/dates';
+import {TableRepository} from '../TableRepository';
+import {RestaurantTable, TableInput} from '../../features/tables/table.types';
+import {mapTable, TableRow} from './map';
+import {DomainError} from '../../lib/errors';
+
+const id = () => crypto.randomUUID();
+
+export class SqliteTableRepository implements TableRepository {
+    async list() {
+        const db = await getDb();
+        return (await db.select<TableRow[]>('select * from restaurant_tables order by sort_order,name')).map(mapTable)
+    }
+
+    async create(input: TableInput) {
+        const db = await getDb();
+        const row = {id: id(), createdAt: nowIso(), updatedAt: nowIso()};
+        await db.execute('insert into restaurant_tables(id,name,sort_order,is_active,created_at,updated_at) values($1,$2,$3,$4,$5,$6)', [row.id, input.name, input.sortOrder, input.isActive ? 1 : 0, row.createdAt, row.updatedAt]);
+        return {...input, ...row} as RestaurantTable
+    }
+
+    async update(idv: string, input: TableInput) {
+        const db = await getDb();
+        const updatedAt = nowIso();
+        await db.execute('update restaurant_tables set name=$1,sort_order=$2,is_active=$3,updated_at=$4 where id=$5', [input.name, input.sortOrder, input.isActive ? 1 : 0, updatedAt, idv]);
+        const rows = await db.select<TableRow[]>('select * from restaurant_tables where id=$1', [idv]);
+        return mapTable(rows[0])
+    }
+
+    async delete(idv: string) {
+        const db = await getDb();
+        const future = await db.select<{
+            c: number
+        }[]>('select count(*) c from bookings where table_id=$1 and status<>\'cancelled\' and booking_date>=date(\'now\')', [idv]);
+        if ((future[0]?.c ?? 0) > 0) throw new DomainError('Нельзя удалить стол с будущими бронями');
+        await db.execute('delete from restaurant_tables where id=$1', [idv])
+    }
+}
