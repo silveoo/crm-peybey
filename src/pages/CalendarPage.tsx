@@ -13,6 +13,12 @@ import {minutesFromTime, overlaps, timeFromMinutes} from '../features/calendar/c
 export function CalendarPage({reload}: { reload: () => Promise<void> }) {
     const s = useAppStore();
     const [edit, setEdit] = useState<Partial<Booking> | null>(null);
+    const [pendingMove, setPendingMove] = useState<{
+        booking: Booking;
+        tableId: string;
+        startTime: string;
+        endTime: string
+    } | null>(null);
     const save = async (v: BookingInput) => {
         try {
             if (edit?.id) await bookingService.update(edit.id, v, s.settings!); else await bookingService.create(v, s.settings!);
@@ -23,7 +29,7 @@ export function CalendarPage({reload}: { reload: () => Promise<void> }) {
             throw e
         }
     };
-    const move = async (booking: Booking, tableId: string, startTime: string, endTime: string) => {
+    const move = (booking: Booking, tableId: string, startTime: string, endTime: string) => {
         if (booking.tableId === tableId && booking.startTime === startTime) return;
         const conflict = s.bookings.some(item => item.id !== booking.id && item.tableId === tableId &&
             item.status !== 'cancelled' && overlaps(item.startTime, item.endTime, startTime, endTime));
@@ -31,10 +37,15 @@ export function CalendarPage({reload}: { reload: () => Promise<void> }) {
             s.set({toast: 'На выбранном столе уже есть бронь на это время'});
             return
         }
-        if (!confirm(`Вы уверены, что хотите перенести бронь с именем гостя (${booking.guestName}) с времени (${booking.startTime}–${booking.endTime}) на время (${startTime}–${endTime})?`)) return;
+        setPendingMove({booking, tableId, startTime, endTime})
+    };
+    const confirmMove = async () => {
+        if (!pendingMove) return;
+        const {booking, tableId, startTime, endTime} = pendingMove;
         try {
             await bookingService.update(booking.id, {...booking, tableId, startTime, endTime}, s.settings!);
             s.set({toast: 'Бронь перенесена'});
+            setPendingMove(null);
             await reload()
         } catch (e) {
             s.set({toast: toUserMessage(e)})
@@ -71,5 +82,20 @@ export function CalendarPage({reload}: { reload: () => Promise<void> }) {
                                setEdit(null);
                                await reload()
                            }
-                       } : undefined}/>}</div>
+                       } : undefined}/>} {pendingMove && <div
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4">
+        <div role="dialog" aria-modal="true" aria-labelledby="move-booking-title"
+             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 id="move-booking-title" className="text-lg font-semibold">Перенести бронь?</h2>
+            <p className="mt-3 text-sm text-neutral-600">
+                Бронь гостя <b>{pendingMove.booking.guestName}</b> будет перенесена с
+                {' '}{pendingMove.booking.startTime}–{pendingMove.booking.endTime} на
+                {' '}{pendingMove.startTime}–{pendingMove.endTime}.
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+                <Button onClick={() => setPendingMove(null)}>Отмена</Button>
+                <Button className="bg-neutral-900 text-white" onClick={confirmMove}>Перенести</Button>
+            </div>
+        </div>
+    </div>}</div>
 }

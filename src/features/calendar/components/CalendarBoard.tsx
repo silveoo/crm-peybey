@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {Booking} from '../../bookings/booking.types';
 import {RestaurantTable} from '../../tables/table.types';
 import {AppSettings} from '../../../repositories/SettingsRepository';
@@ -29,6 +29,8 @@ export function CalendarBoard({date, tables, bookings, settings, onSlot, onBooki
     const [sel, setSel] = useState<{ t: string; s: number; e: number } | null>(null);
     const [dragged, setDragged] = useState<Booking | null>(null);
     const [dropTarget, setDropTarget] = useState<{tableId: string; minute: number} | null>(null);
+    const pointerDrag = useRef<{booking: Booking; x: number; y: number; moving: boolean} | null>(null);
+    const dropTargetRef = useRef<{tableId: string; minute: number} | null>(null);
     const draggedDuration = dragged ? (() => {
         const bookingStart = shiftMinute(dragged.startTime, settings.dayStart);
         let bookingEnd = shiftMinute(dragged.endTime, settings.dayStart);
@@ -40,6 +42,59 @@ export function CalendarBoard({date, tables, bookings, settings, onSlot, onBooki
         const timer = window.setInterval(() => setNow(new Date()), 30_000);
         return () => window.clearInterval(timer)
     }, []);
+    useEffect(() => {
+        const clearDrag = () => {
+            pointerDrag.current = null;
+            dropTargetRef.current = null;
+            setDragged(null);
+            setDropTarget(null)
+        };
+        const movePointer = (event: PointerEvent) => {
+            const drag = pointerDrag.current;
+            if (!drag) return;
+            if (!drag.moving && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 4) return;
+            drag.moving = true;
+            setDragged(drag.booking);
+            const slot = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-drop-table]');
+            if (!slot) {
+                dropTargetRef.current = null;
+                setDropTarget(null);
+                return
+            }
+            const bookingStart = shiftMinute(drag.booking.startTime, settings.dayStart);
+            let bookingEnd = shiftMinute(drag.booking.endTime, settings.dayStart);
+            if (bookingEnd <= bookingStart) bookingEnd += 1440;
+            const duration = bookingEnd - bookingStart;
+            const slotMinute = Number(slot.dataset.dropMinute);
+            const minute = Math.max(start, Math.min(slotMinute, end - duration));
+            const target = {tableId: slot.dataset.dropTable!, minute};
+            dropTargetRef.current = target;
+            setDropTarget(target)
+        };
+        const finishPointer = () => {
+            const drag = pointerDrag.current;
+            const target = dropTargetRef.current;
+            if (!drag) return;
+            if (drag.moving && target) {
+                const bookingStart = shiftMinute(drag.booking.startTime, settings.dayStart);
+                let bookingEnd = shiftMinute(drag.booking.endTime, settings.dayStart);
+                if (bookingEnd <= bookingStart) bookingEnd += 1440;
+                const duration = bookingEnd - bookingStart;
+                onMove(drag.booking, target.tableId, timeFromMinutes(target.minute), timeFromMinutes(target.minute + duration))
+            } else if (!drag.moving) {
+                onBooking(drag.booking)
+            }
+            clearDrag()
+        };
+        window.addEventListener('pointermove', movePointer);
+        window.addEventListener('pointerup', finishPointer);
+        window.addEventListener('pointercancel', clearDrag);
+        return () => {
+            window.removeEventListener('pointermove', movePointer);
+            window.removeEventListener('pointerup', finishPointer);
+            window.removeEventListener('pointercancel', clearDrag)
+        }
+    }, [end, onBooking, onMove, settings.dayStart, start]);
     const nowClock = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
     const overnight = end > 1440;
     const shiftDate = new Date(now);
@@ -67,19 +122,7 @@ export function CalendarBoard({date, tables, bookings, settings, onSlot, onBooki
                 <div className={`sticky left-0 z-10 h-6 bg-white px-2 pt-1.5 text-xs leading-none text-neutral-500 ${
                     (m - start) % majorStep === 0 ? 'border-t border-neutral-200' : 'border-t border-neutral-100'
                 }`}>{(m - start) % majorStep === 0 ? timeFromMinutes(m) : ''}</div>
-                {active.map(t => <div key={t.id + m} onDragOver={event => {
-                    if (!dragged) return;
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = 'move';
-                    setDropTarget({tableId: t.id, minute: Math.min(m, end - draggedDuration)})
-                }} onDrop={event => {
-                    event.preventDefault();
-                    if (!dragged) return;
-                    const targetStart = Math.min(m, end - draggedDuration);
-                    onMove(dragged, t.id, timeFromMinutes(targetStart), timeFromMinutes(targetStart + draggedDuration));
-                    setDragged(null);
-                    setDropTarget(null)
-                }} onMouseDown={e => {
+                {active.map(t => <div key={t.id + m} data-drop-table={t.id} data-drop-minute={m} onMouseDown={e => {
                     if ((e.target as HTMLElement).dataset.booking) return;
                     setSel({t: t.id, s: m, e: Math.min(end, m + selectionStep)})
                 }} onMouseMove={event => {
@@ -113,37 +156,12 @@ export function CalendarBoard({date, tables, bookings, settings, onSlot, onBooki
                 <p className="truncate opacity-70">{timeFromMinutes(dropTarget.minute)}–{timeFromMinutes(dropTarget.minute + draggedDuration)}</p>
             </div>}
             {bookings.filter(b => b.tableId === t.id).map(b =>
-            <button data-booking="1" draggable key={b.id} onClick={() => {
-                if (!dragged) onBooking(b)
-            }} onDragOver={event => {
-                if (!dragged || dragged.id !== b.id) return;
+            <button data-booking="1" key={b.id} onPointerDown={event => {
+                if (event.button !== 0) return;
                 event.preventDefault();
-                event.dataTransfer.dropEffect = 'move';
-                const columnBounds = event.currentTarget.parentElement!.getBoundingClientRect();
-                const hoveredMinute = start + Math.floor((event.clientY - columnBounds.top) / (selectionStep * ppm)) * selectionStep;
-                setDropTarget({tableId: b.tableId, minute: Math.max(start, Math.min(hoveredMinute, end - draggedDuration))})
-            }} onDrop={event => {
-                if (!dragged || dragged.id !== b.id) return;
-                event.preventDefault();
-                const columnBounds = event.currentTarget.parentElement!.getBoundingClientRect();
-                const hoveredMinute = start + Math.floor((event.clientY - columnBounds.top) / (selectionStep * ppm)) * selectionStep;
-                const targetStart = Math.max(start, Math.min(hoveredMinute, end - draggedDuration));
-                onMove(dragged, b.tableId, timeFromMinutes(targetStart), timeFromMinutes(targetStart + draggedDuration));
-                setDragged(null);
-                setDropTarget(null)
-            }} onDragStart={event => {
-                setDragged(b);
-                event.dataTransfer.effectAllowed = 'move';
-                event.dataTransfer.setData('text/plain', b.id);
-                const transparentPreview = document.createElement('canvas');
-                transparentPreview.width = 1;
-                transparentPreview.height = 1;
-                event.dataTransfer.setDragImage(transparentPreview, 0, 0)
-            }} onDragEnd={() => {
-                setDragged(null);
-                setDropTarget(null)
+                pointerDrag.current = {booking: b, x: event.clientX, y: event.clientY, moving: false}
             }}
-                    className={`pointer-events-auto absolute left-2 right-2 cursor-grab overflow-hidden rounded-xl border border-neutral-300 bg-white p-2 text-left text-xs shadow-md hover:shadow-lg active:cursor-grabbing ${dragged?.id === b.id ? 'opacity-25' : ''}`}
+                    className={`${dragged?.id === b.id ? 'pointer-events-none opacity-25' : 'pointer-events-auto'} absolute left-2 right-2 cursor-grab touch-none overflow-hidden rounded-xl border border-neutral-300 bg-white p-2 text-left text-xs shadow-md hover:shadow-lg active:cursor-grabbing`}
                     style={{
                         top: topForTime(b.startTime, settings.dayStart, ppm),
                         height: heightForRange(b.startTime, b.endTime, ppm)
