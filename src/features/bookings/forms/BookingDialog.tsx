@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
 import {useForm} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
-import {bookingSchema, BookingFormValues} from '../booking.schema';
+import {bookingSchema, BookingFormInput, BookingFormValues} from '../booking.schema';
 import {Booking} from '../booking.types';
 import {RestaurantTable} from '../../tables/table.types';
 import {Button} from '../../../components/ui/Button';
@@ -21,7 +21,7 @@ export function BookingDialog({initial, tables, onClose, onSave, onDelete}: {
         handleSubmit,
         formState: {errors, isDirty},
         reset
-    } = useForm<BookingFormValues>({
+    } = useForm<BookingFormInput, unknown, BookingFormValues>({
         resolver: zodResolver(bookingSchema),
         defaultValues: {
             tableId: initial.tableId ?? '',

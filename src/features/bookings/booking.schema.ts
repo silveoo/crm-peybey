@@ -15,4 +15,5 @@ export const bookingSchema = z.object({
     message: 'Начало и окончание не могут совпадать',
     path: ['endTime']
 });
-export type BookingFormValues = z.infer<typeof bookingSchema>;
+export type BookingFormInput = z.input<typeof bookingSchema>;
+export type BookingFormValues = z.output<typeof bookingSchema>;
