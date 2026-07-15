@@ -12,7 +12,7 @@ export const bookingSchema = z.object({
     comment: z.string().optional().default(''),
     status: z.enum(['confirmed', 'pending', 'seated', 'completed', 'cancelled'])
 }).refine(v => isEndAfterStart(v.startTime, v.endTime), {
-    message: 'Окончание должно быть позже начала',
+    message: 'Начало и окончание не могут совпадать',
     path: ['endTime']
 });
 export type BookingFormValues = z.infer<typeof bookingSchema>;

@@ -24,8 +24,6 @@ let settings: AppSettings = {
     restaurantName: 'Peybey CRM',
     dayStart: '09:00',
     dayEnd: '23:00',
-    stepMinutes: 30,
-    showCompleted: true,
 };
 
 export class MemoryTableRepository implements TableRepository {

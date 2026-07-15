@@ -9,18 +9,9 @@ export function SettingsPage({reload}: { reload: () => Promise<void> }) {
     const {settings} = useAppStore();
     const {register, handleSubmit} = useForm<AppSettings>({values: settings!});
     return <form className="max-w-xl space-y-4 p-6" onSubmit={handleSubmit(async v => {
-        await settingsRepo.save({
-            ...v,
-            stepMinutes: Number(v.stepMinutes) as 15 | 30 | 60,
-            showCompleted: Boolean(v.showCompleted)
-        });
+        await settingsRepo.save(v);
         await reload()
     })}><h1 className="text-2xl font-semibold">Настройки</h1><Input {...register('restaurantName')}/><Input
-        type="time" {...register('dayStart')}/><Input type="time" {...register('dayEnd')}/><select
-        className="w-full rounded-lg border p-2" {...register('stepMinutes')}>
-        <option value={15}>15 минут</option>
-        <option value={30}>30 минут</option>
-        <option value={60}>60 минут</option>
-    </select><label className="flex gap-2"><input type="checkbox" {...register('showCompleted')}/>Показывать завершённые
-        брони</label><Button className="bg-neutral-900 text-white">Сохранить</Button></form>
+        type="time" step={1800} {...register('dayStart')}/><Input type="time" step={1800} {...register('dayEnd')}/><p
+        className="text-sm text-neutral-500">Шкала расписания: 30 минут, выбор времени: 15 минут.</p><Button className="bg-neutral-900 text-white">Сохранить</Button></form>
 }

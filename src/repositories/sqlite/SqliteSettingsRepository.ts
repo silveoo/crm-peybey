@@ -4,9 +4,7 @@ import {AppSettings, SettingsRepository} from '../SettingsRepository';
 const defaults: AppSettings = {
     restaurantName: 'Peybey CRM',
     dayStart: '09:00',
-    dayEnd: '23:00',
-    stepMinutes: 30,
-    showCompleted: true
+    dayEnd: '23:00'
 };
 
 export class SqliteSettingsRepository implements SettingsRepository {
@@ -18,9 +16,7 @@ export class SqliteSettingsRepository implements SettingsRepository {
             ...defaults,
             restaurantName: map.restaurantName ?? defaults.restaurantName,
             dayStart: map.dayStart ?? defaults.dayStart,
-            dayEnd: map.dayEnd ?? defaults.dayEnd,
-            stepMinutes: Number(map.stepMinutes ?? defaults.stepMinutes) as 15 | 30 | 60,
-            showCompleted: (map.showCompleted ?? 'true') === 'true'
+            dayEnd: map.dayEnd ?? defaults.dayEnd
         }
     }
 

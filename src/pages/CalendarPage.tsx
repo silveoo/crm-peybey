@@ -8,6 +8,7 @@ import {Booking, BookingInput} from '../features/bookings/booking.types';
 import {bookingService} from '../app/providers';
 import {todayIso, displayDate} from '../lib/dates';
 import {toUserMessage} from '../lib/errors';
+import {minutesFromTime, overlaps, timeFromMinutes} from '../features/calendar/calendar.utils';
 
 export function CalendarPage({reload}: { reload: () => Promise<void> }) {
     const s = useAppStore();
@@ -22,6 +23,23 @@ export function CalendarPage({reload}: { reload: () => Promise<void> }) {
             throw e
         }
     };
+    const move = async (booking: Booking, tableId: string, startTime: string, endTime: string) => {
+        if (booking.tableId === tableId && booking.startTime === startTime) return;
+        const conflict = s.bookings.some(item => item.id !== booking.id && item.tableId === tableId &&
+            item.status !== 'cancelled' && overlaps(item.startTime, item.endTime, startTime, endTime));
+        if (conflict) {
+            s.set({toast: 'На выбранном столе уже есть бронь на это время'});
+            return
+        }
+        if (!confirm(`Вы уверены, что хотите перенести бронь с именем гостя (${booking.guestName}) с времени (${booking.startTime}–${booking.endTime}) на время (${startTime}–${endTime})?`)) return;
+        try {
+            await bookingService.update(booking.id, {...booking, tableId, startTime, endTime}, s.settings!);
+            s.set({toast: 'Бронь перенесена'});
+            await reload()
+        } catch (e) {
+            s.set({toast: toUserMessage(e)})
+        }
+    };
     return <div className="flex h-full flex-col p-5">
         <header className="mb-4 flex items-center justify-between">
             <div><h1 className="text-2xl font-semibold">Календарь</h1><p
@@ -33,12 +51,9 @@ export function CalendarPage({reload}: { reload: () => Promise<void> }) {
                 className="bg-neutral-900 text-white" onClick={() => setEdit({
                 bookingDate: s.date,
                 startTime: s.settings!.dayStart,
-                endTime: '10:00',
+                endTime: timeFromMinutes(minutesFromTime(s.settings!.dayStart) + 60),
                 tableId: s.tables.find(t => t.isActive)?.id
-            })}>Новая бронь</Button>{import.meta.env.DEV && <Button onClick={async () => {
-                await bookingService.addDemo(s.date, s.tables.filter(t => t.isActive).map(t => t.id).slice(0, 4));
-                await reload()
-            }}>Добавить демонстрационные брони</Button>}</div>
+            })}>Новая бронь</Button></div>
         </header>
         {s.settings && <CalendarBoard date={s.date} tables={s.tables} bookings={s.bookings} settings={s.settings}
                                       onSlot={(tableId, startTime, endTime) => setEdit({
@@ -48,7 +63,7 @@ export function CalendarPage({reload}: { reload: () => Promise<void> }) {
                                           endTime,
                                           status: 'confirmed',
                                           guestCount: 2
-                                      })} onBooking={setEdit}/>} {edit &&
+                                      })} onBooking={setEdit} onMove={move}/>} {edit &&
         <BookingDialog initial={edit} tables={s.tables} onClose={() => setEdit(null)} onSave={save}
                        onDelete={edit.id ? async () => {
                            if (confirm('Удалить бронь?')) {

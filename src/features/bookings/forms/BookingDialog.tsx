@@ -66,8 +66,8 @@ export function BookingDialog({initial, tables, onClose, onSave, onDelete}: {
                 className="w-full rounded-lg border p-2" {...register('tableId')}>{tables.filter(t => t.isActive || t.id === initial.tableId).map(t =>
                 <option key={t.id} value={t.id}>{t.name}</option>)}</select></label><Input
                 type="date" {...register('bookingDate')}/>
-                <div className="grid grid-cols-2 gap-2"><Input type="time" {...register('startTime')}/><Input
-                    type="time" {...register('endTime')}/></div>
+                <div className="grid grid-cols-2 gap-2"><Input type="time" step={900} {...register('startTime')}/><Input
+                    type="time" step={900} {...register('endTime')}/></div>
                 <Input placeholder="Имя гостя" {...register('guestName')}/><Input
                     placeholder="Телефон" {...register('phone')}/><Input type="number"
                                                                          min={1} {...register('guestCount')}/><textarea
@@ -82,11 +82,8 @@ export function BookingDialog({initial, tables, onClose, onSave, onDelete}: {
                                                                  key={i}>{e?.message}</p>)}{initial.createdAt && <div
                     className="rounded-lg bg-neutral-50 p-3 text-xs text-neutral-500">Создана: {initial.createdAt}<br/>Изменена: {initial.updatedAt}
                 </div>}<Button disabled={saving}
-                               className="w-full bg-neutral-900 text-white">Сохранить</Button>{initial.id && <><Button
-                    type="button" disabled={saving}
-                    onClick={() => onSave({...initial as BookingFormValues, status: 'cancelled'})} className="w-full">Отменить
-                    бронь</Button><Button type="button" onClick={onDelete}
-                                          className="w-full text-red-600">Удалить</Button></>}</div>
+                               className="w-full bg-neutral-900 text-white">Сохранить</Button>{initial.id && <Button
+                    type="button" onClick={onDelete} className="w-full text-red-600">Удалить</Button>}</div>
         </form>
     </div>
 }

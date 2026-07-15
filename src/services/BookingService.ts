@@ -1,7 +1,7 @@
 import {BookingRepository} from '../repositories/BookingRepository';
 import {BookingInput} from '../features/bookings/booking.types';
 import {AppSettings} from '../repositories/SettingsRepository';
-import {isEndAfterStart, minutesFromTime, overlaps} from '../features/calendar/calendar.utils';
+import {isEndAfterStart, minutesFromTime, overlaps, shiftEndMinute, shiftMinute} from '../features/calendar/calendar.utils';
 import {DomainError} from '../lib/errors';
 
 export class BookingService {
@@ -14,7 +14,11 @@ export class BookingService {
 
     validate(i: BookingInput, s: AppSettings) {
         if (!isEndAfterStart(i.startTime, i.endTime)) throw new DomainError('Окончание должно быть позже начала');
-        if (minutesFromTime(i.startTime) < minutesFromTime(s.dayStart) || minutesFromTime(i.endTime) > minutesFromTime(s.dayEnd)) throw new DomainError('Бронь должна попадать в рабочий день');
+        const shiftStart = minutesFromTime(s.dayStart), shiftEnd = shiftEndMinute(s.dayStart, s.dayEnd);
+        const bookingStart = shiftMinute(i.startTime, s.dayStart);
+        let bookingEnd = shiftMinute(i.endTime, s.dayStart);
+        if (bookingEnd <= bookingStart) bookingEnd += 1440;
+        if (bookingStart < shiftStart || bookingEnd > shiftEnd) throw new DomainError('Бронь должна попадать в рабочую смену');
         if (i.guestCount <= 0) throw new DomainError('Количество гостей должно быть положительным')
     }
 
