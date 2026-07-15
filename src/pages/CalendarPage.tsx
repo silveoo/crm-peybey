@@ -43,10 +43,10 @@ export function CalendarPage({reload}: { reload: () => Promise<void> }) {
     return <div className="flex h-full flex-col p-5">
         <header className="mb-4 flex items-center justify-between">
             <div><h1 className="text-2xl font-semibold">Календарь</h1><p
-                className="text-neutral-500">{displayDate(s.date)} {s.date === todayIso() ? '· сегодня' : ''}</p></div>
+                className="text-neutral-500">{displayDate(s.date)} {s.date === todayIso() ? '· текущая смена' : ''}</p></div>
             <div className="flex gap-2"><Button
                 onClick={() => s.set({date: format(addDays(parseISO(s.date), -1), 'yyyy-MM-dd')})}>←</Button><Button
-                onClick={() => s.set({date: todayIso()})}>Сегодня</Button><Button
+                onClick={() => s.set({date: todayIso()})}>Текущая смена</Button><Button
                 onClick={() => s.set({date: format(addDays(parseISO(s.date), 1), 'yyyy-MM-dd')})}>→</Button><Button
                 className="bg-neutral-900 text-white" onClick={() => setEdit({
                 bookingDate: s.date,

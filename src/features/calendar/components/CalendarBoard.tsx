@@ -115,6 +115,22 @@ export function CalendarBoard({date, tables, bookings, settings, onSlot, onBooki
             {bookings.filter(b => b.tableId === t.id).map(b =>
             <button data-booking="1" draggable key={b.id} onClick={() => {
                 if (!dragged) onBooking(b)
+            }} onDragOver={event => {
+                if (!dragged || dragged.id !== b.id) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                const columnBounds = event.currentTarget.parentElement!.getBoundingClientRect();
+                const hoveredMinute = start + Math.floor((event.clientY - columnBounds.top) / (selectionStep * ppm)) * selectionStep;
+                setDropTarget({tableId: b.tableId, minute: Math.max(start, Math.min(hoveredMinute, end - draggedDuration))})
+            }} onDrop={event => {
+                if (!dragged || dragged.id !== b.id) return;
+                event.preventDefault();
+                const columnBounds = event.currentTarget.parentElement!.getBoundingClientRect();
+                const hoveredMinute = start + Math.floor((event.clientY - columnBounds.top) / (selectionStep * ppm)) * selectionStep;
+                const targetStart = Math.max(start, Math.min(hoveredMinute, end - draggedDuration));
+                onMove(dragged, b.tableId, timeFromMinutes(targetStart), timeFromMinutes(targetStart + draggedDuration));
+                setDragged(null);
+                setDropTarget(null)
             }} onDragStart={event => {
                 setDragged(b);
                 event.dataTransfer.effectAllowed = 'move';
