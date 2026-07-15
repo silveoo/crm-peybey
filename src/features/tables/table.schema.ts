@@ -1,0 +1,1 @@
+import {z} from 'zod';export const tableSchema=z.object({name:z.string().min(1,'Введите название'),sortOrder:z.coerce.number().int().min(0),isActive:z.boolean()});export type TableFormValues=z.infer<typeof tableSchema>;
