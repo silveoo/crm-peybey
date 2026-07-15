@@ -1,0 +1,18 @@
+export type BookingStatus = 'confirmed' | 'pending' | 'seated' | 'completed' | 'cancelled';
+
+export interface Booking {
+    id: string;
+    tableId: string;
+    bookingDate: string;
+    startTime: string;
+    endTime: string;
+    guestName: string;
+    phone: string;
+    guestCount: number;
+    comment: string;
+    status: BookingStatus;
+    createdAt: string;
+    updatedAt: string
+}
+
+export type BookingInput = Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>;

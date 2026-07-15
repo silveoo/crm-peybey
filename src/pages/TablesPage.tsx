@@ -1,0 +1,40 @@
+import {useState} from 'react';
+import {Button} from '../components/ui/Button';
+import {Input} from '../components/ui/Input';
+import {useAppStore} from '../store/appStore';
+import {tableService} from '../app/providers';
+import {toUserMessage} from '../lib/errors';
+
+export function TablesPage({reload}: { reload: () => Promise<void> }) {
+    const {tables, set} = useAppStore();
+    const [name, setName] = useState('');
+    return <div className="p-6"><h1 className="mb-4 text-2xl font-semibold">Столы</h1>
+        <div className="mb-4 flex gap-2"><Input value={name} onChange={e => setName(e.target.value)}
+                                                placeholder="Название стола"/><Button onClick={async () => {
+            await tableService.create({name, sortOrder: tables.length + 1, isActive: true});
+            setName('');
+            await reload()
+        }}>Создать</Button></div>
+        <div className="space-y-2">{tables.map(t => <div key={t.id}
+                                                         className="flex items-center gap-2 rounded-xl border bg-white p-3">
+            <Input defaultValue={t.name} onBlur={async e => {
+                await tableService.update(t.id, {...t, name: e.target.value});
+                await reload()
+            }}/><Input className="w-24" type="number" defaultValue={t.sortOrder} onBlur={async e => {
+            await tableService.update(t.id, {...t, sortOrder: Number(e.target.value)});
+            await reload()
+        }}/><Button onClick={async () => {
+            await tableService.update(t.id, {...t, isActive: !t.isActive});
+            await reload()
+        }}>{t.isActive ? 'Отключить' : 'Включить'}</Button><Button onClick={async () => {
+            try {
+                if (confirm('Удалить стол?')) {
+                    await tableService.delete(t.id);
+                    await reload()
+                }
+            } catch (e) {
+                set({toast: toUserMessage(e)})
+            }
+        }}>Удалить</Button></div>)}</div>
+    </div>
+}

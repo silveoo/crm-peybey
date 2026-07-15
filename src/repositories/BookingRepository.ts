@@ -1,0 +1,13 @@
+import {Booking, BookingInput} from '../features/bookings/booking.types';
+
+export interface BookingRepository {
+    listByDate(date: string): Promise<Booking[]>;
+
+    create(input: BookingInput): Promise<Booking>;
+
+    update(id: string, input: BookingInput): Promise<Booking>;
+
+    delete(id: string): Promise<void>;
+
+    addDemo(date: string, tableIds: string[]): Promise<void>
+}

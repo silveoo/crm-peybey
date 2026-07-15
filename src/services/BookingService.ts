@@ -1,0 +1,45 @@
+import {BookingRepository} from '../repositories/BookingRepository';
+import {BookingInput} from '../features/bookings/booking.types';
+import {AppSettings} from '../repositories/SettingsRepository';
+import {isEndAfterStart, minutesFromTime, overlaps} from '../features/calendar/calendar.utils';
+import {DomainError} from '../lib/errors';
+
+export class BookingService {
+    constructor(private repo: BookingRepository) {
+    }
+
+    listByDate(d: string) {
+        return this.repo.listByDate(d)
+    }
+
+    validate(i: BookingInput, s: AppSettings) {
+        if (!isEndAfterStart(i.startTime, i.endTime)) throw new DomainError('Окончание должно быть позже начала');
+        if (minutesFromTime(i.startTime) < minutesFromTime(s.dayStart) || minutesFromTime(i.endTime) > minutesFromTime(s.dayEnd)) throw new DomainError('Бронь должна попадать в рабочий день');
+        if (i.guestCount <= 0) throw new DomainError('Количество гостей должно быть положительным')
+    }
+
+    async ensureNoLocalConflict(i: BookingInput, exclude = '') {
+        const list = await this.repo.listByDate(i.bookingDate);
+        if (list.some(b => b.id !== exclude && b.tableId === i.tableId && b.status !== 'cancelled' && overlaps(b.startTime, b.endTime, i.startTime, i.endTime))) throw new DomainError('На выбранном столе уже есть бронь на это время')
+    }
+
+    async create(i: BookingInput, s: AppSettings) {
+        this.validate(i, s);
+        await this.ensureNoLocalConflict(i);
+        return this.repo.create(i)
+    }
+
+    async update(id: string, i: BookingInput, s: AppSettings) {
+        this.validate(i, s);
+        await this.ensureNoLocalConflict(i, id);
+        return this.repo.update(id, i)
+    }
+
+    delete(id: string) {
+        return this.repo.delete(id)
+    }
+
+    addDemo(d: string, ids: string[]) {
+        return this.repo.addDemo(d, ids)
+    }
+}

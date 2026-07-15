@@ -1,0 +1,5 @@
+import {format, parseISO} from 'date-fns';
+
+export const todayIso = () => format(new Date(), 'yyyy-MM-dd');
+export const displayDate = (iso: string) => format(parseISO(iso), 'dd.MM.yyyy');
+export const nowIso = () => new Date().toISOString();
