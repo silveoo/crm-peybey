@@ -5,7 +5,7 @@ import {useAppStore} from '../store/appStore';
 import {CalendarBoard} from '../features/calendar/components/CalendarBoard';
 import {BookingDialog} from '../features/bookings/forms/BookingDialog';
 import {Booking, BookingInput} from '../features/bookings/booking.types';
-import {bookingService} from '../app/providers';
+import {bookingService, clientService} from '../app/providers';
 import {todayIso, displayDate} from '../lib/dates';
 import {toUserMessage} from '../lib/errors';
 import {minutesFromTime, overlaps, timeFromMinutes} from '../features/calendar/calendar.utils';
@@ -20,11 +20,23 @@ export function CalendarPage({reload}: { reload: () => Promise<void> }) {
         endTime: string
     } | null>(null);
     const save = async (v: BookingInput) => {
+        let clientWarning = '';
         try {
             const clientNote = s.clients.find(client => client.phone === v.phone)?.note;
             const input = {...v, comment: v.comment.trim() || clientNote || ''};
-            if (edit?.id) await bookingService.update(edit.id, input, s.settings!); else await bookingService.create(input, s.settings!);
-            s.set({toast: 'Бронь сохранена'});
+            if (edit?.id) {
+                await bookingService.update(edit.id, input, s.settings!)
+            } else {
+                await bookingService.create(input, s.settings!);
+                if (input.phone && !s.clients.some(client => client.phone === input.phone)) {
+                    try {
+                        await clientService.create({name: input.guestName, phone: input.phone, note: ''})
+                    } catch (error) {
+                        clientWarning = `Бронь сохранена, но клиент не создан: ${toUserMessage(error)}`
+                    }
+                }
+            }
+            s.set({toast: clientWarning || 'Бронь сохранена'});
             await reload()
         } catch (e) {
             s.set({toast: toUserMessage(e)});

@@ -173,7 +173,7 @@ export function CalendarBoard({date, tables, bookings, settings, onSlot, onBooki
                         top: topForTime(b.startTime, settings.dayStart, ppm),
                         height: heightForRange(b.startTime, b.endTime, ppm)
                     }} title={`${b.guestName}, ${b.guestCount} гостей, ${b.startTime}-${b.endTime}`}>
-                <b>{b.startTime} {b.guestName}</b><p className="truncate text-neutral-500">{b.comment}</p>
+                <b>{b.startTime} – {b.endTime} {b.guestName}</b><p className="truncate text-neutral-500">{b.comment}</p>
             </button>)}</div>)}</div>
     </div>
 }
